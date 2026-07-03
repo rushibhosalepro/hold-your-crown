@@ -15,8 +15,16 @@ export type JoinResponse = {
   type: 'join';
   gameId: string;
   createdAt: number;
-  channel: string; // `${postId}-${gameId}` — realtime channel to subscribe to
+  channel: string; // `${postId}_${gameId}` — realtime channel (letters/numbers/underscores only)
   now: number; // server time, for client clockOffset calc
+};
+
+export type LobbyResponse = {
+  type: 'lobby';
+  players: string[]; // live usernames currently in the lobby
+  count: number;
+  createdAt: number; // game's createdAt (anchors the lobby countdown)
+  now: number;
 };
 
 export type ScorePayload = {

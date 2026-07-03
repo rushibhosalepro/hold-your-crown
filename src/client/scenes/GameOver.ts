@@ -1,66 +1,88 @@
 import { Scene } from 'phaser';
-import * as Phaser from 'phaser';
 
+type Standing = {
+  name: string;
+  holdMs: number;
+  longestMs: number;
+  kills: number;
+};
+
+// Final standings for a finished round: whoever held the crown longest wins.
 export class GameOver extends Scene {
-  camera: Phaser.Cameras.Scene2D.Camera;
-  background: Phaser.GameObjects.Image;
-  gameover_text: Phaser.GameObjects.Text;
+  private board: Standing[] = [];
+  private me = '';
 
   constructor() {
     super('GameOver');
   }
 
+  init(data: { board?: Standing[]; me?: string }) {
+    this.board = data.board ?? [];
+    this.me = data.me ?? '';
+  }
+
   create() {
-    // Configure camera
-    this.camera = this.cameras.main;
-    this.camera.setBackgroundColor(0xff0000);
+    const cx = 1024 / 2;
+    this.cameras.main.setBackgroundColor(0x0a0816);
 
-    // Background – create once, full-screen
-    this.background = this.add.image(0, 0, 'background').setOrigin(0).setAlpha(0.5);
-
-    // "Game Over" text – created once and scaled responsively
-    this.gameover_text = this.add
-      .text(0, 0, 'Game Over', {
+    const winner = this.board[0];
+    const title =
+      winner && winner.holdMs > 0 ? `👑 ${this.label(winner.name)} wins!` : 'No one held the crown';
+    this.add
+      .text(cx, 80, title, {
         fontFamily: 'Arial Black',
-        fontSize: '64px',
-        color: '#ffffff',
+        fontSize: 50,
+        color: '#ffd24a',
         stroke: '#000000',
-        strokeThickness: 8,
+        strokeThickness: 6,
         align: 'center',
       })
       .setOrigin(0.5);
 
-    // Initial responsive layout
-    this.updateLayout(this.scale.width, this.scale.height);
+    this.add
+      .text(cx, 140, 'Longest reign takes the crown', {
+        fontFamily: 'Arial',
+        fontSize: 20,
+        color: '#9fd8ff',
+      })
+      .setOrigin(0.5);
 
-    // Update layout on canvas resize / orientation change
-    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
-      const { width, height } = gameSize;
-      this.updateLayout(width, height);
+    // Table columns.
+    const nameX = 160;
+    const totalX = 540;
+    const longestX = 690;
+    const killsX = 820;
+    const headY = 210;
+
+    const headStyle = { fontFamily: 'Arial', fontSize: 17, color: '#9fd8ff' } as const;
+    this.add.text(nameX, headY, 'PLAYER', headStyle).setOrigin(0, 0.5);
+    this.add.text(totalX, headY, 'TOTAL', headStyle).setOrigin(0.5, 0.5);
+    this.add.text(longestX, headY, 'LONGEST', headStyle).setOrigin(0.5, 0.5);
+    this.add.text(killsX, headY, 'KILLS', headStyle).setOrigin(0.5, 0.5);
+    this.add.rectangle(cx, headY + 20, 720, 2, 0xffd24a, 0.4).setOrigin(0.5, 0.5);
+
+    this.board.slice(0, 8).forEach((s, i) => {
+      const mine = s.name === this.me;
+      const color = i === 0 ? '#ffd24a' : mine ? '#f4ead0' : '#c9c2da';
+      const size = mine ? 24 : 20;
+      const style = { fontFamily: 'Arial', fontSize: size, color };
+      const y = 258 + i * 42;
+      this.add.text(nameX, y, `${i + 1}.  ${this.label(s.name)}`, style).setOrigin(0, 0.5);
+      this.add.text(totalX, y, `${(s.holdMs / 1000).toFixed(1)}s`, style).setOrigin(0.5, 0.5);
+      this.add.text(longestX, y, `${(s.longestMs / 1000).toFixed(1)}s`, style).setOrigin(0.5, 0.5);
+      this.add.text(killsX, y, `${s.kills}`, style).setOrigin(0.5, 0.5);
     });
 
-    // Return to Main Menu on tap / click
-    this.input.once('pointerdown', () => {
-      this.scene.start('MainMenu');
-    });
+    const hint = this.add
+      .text(cx, 710, '▶  Tap to play again', { fontFamily: 'Arial', fontSize: 24, color: '#ffffff' })
+      .setOrigin(0.5);
+    this.tweens.add({ targets: hint, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
+
+    // Re-queue into a fresh lobby (fresh=true so /join won't rejoin the game that just ended).
+    this.input.once('pointerdown', () => this.scene.start('Lobby', { fresh: true }));
   }
 
-  private updateLayout(width: number, height: number): void {
-    // Resize camera viewport to prevent black bars
-    this.cameras.resize(width, height);
-
-    // Stretch background to fill entire screen
-    if (this.background) {
-      this.background.setDisplaySize(width, height);
-    }
-
-    // Compute scale factor (never enlarge above 1×)
-    const scaleFactor = Math.min(Math.min(width / 1024, height / 768), 1);
-
-    // Centre and scale the game-over text
-    if (this.gameover_text) {
-      this.gameover_text.setPosition(width / 2, height / 2);
-      this.gameover_text.setScale(scaleFactor);
-    }
+  private label(name: string): string {
+    return name === this.me ? 'You' : name;
   }
 }

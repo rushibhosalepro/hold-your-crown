@@ -3,6 +3,7 @@ import { AUTO, Game } from 'phaser';
 import { Boot } from './scenes/Boot';
 import { Game as MainGame } from './scenes/Game';
 import { GameOver } from './scenes/GameOver';
+import { Lobby } from './scenes/Lobby';
 import { Preloader } from './scenes/Preloader';
 
 //  Find out more information about the Game Config at:
@@ -26,7 +27,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [Boot, Preloader, MainGame, GameOver],
+  scene: [Boot, Preloader, Lobby, MainGame, GameOver],
 };
 
 const StartGame = (parent: string) => {
