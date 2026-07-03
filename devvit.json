@@ -1,6 +1,11 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
   "name": "hold-your-crown",
+  "permissions": {
+    "realtime": true,
+    "redis": true,
+    "reddit": true
+  },
   "post": {
     "dir": "dist/client",
     "entrypoints": {
