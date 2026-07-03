@@ -10,7 +10,7 @@ import { Preloader } from './scenes/Preloader';
 const config: Phaser.Types.Core.GameConfig = {
   type: AUTO,
   parent: 'game-container',
-  backgroundColor: '#15100b',
+  backgroundColor: '#0a0816',
   title: 'Hold Your Crown',
   scale: {
     // Keep a fixed game resolution but automatically scale it to fit within the available
@@ -19,6 +19,12 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 1024,
     height: 768,
+  },
+  physics: {
+    default: 'arcade',
+    arcade: {
+      debug: false,
+    },
   },
   scene: [Boot, Preloader, MainGame, GameOver],
 };
