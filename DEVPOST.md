@@ -85,5 +85,6 @@ The hard part is not the swordplay — it's running a fast, consistent, real-tim
 
 ## Try It Out
 
-- Play on Reddit: r/HoldYourCrown _(add demo post link)_
-- Source: _(add GitHub link)_
+- **Play on Reddit:** https://www.reddit.com/r/HoldYourCrown/comments/1un510p/hold_your_crown_grab_the_crown_hold_it_longest_to/
+- **App listing:** https://developers.reddit.com/apps/hold-your-crown
+- **Source:** _(add GitHub link)_
