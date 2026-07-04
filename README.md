@@ -33,7 +33,7 @@ Reddit is live, communal, and competitive. Across recent Devvit games there are 
 5. Get knocked out and the crown drops where you fell; anyone can steal it.
 6. After three minutes, **the most total crown-time wins.**
 
-Move with WASD / arrow keys or the on-screen joystick, attack with the sword button or space, and grab health and shield pickups to survive longer. It plays on desktop and mobile.
+Move with WASD / arrow keys or the on-screen joystick and attack with the sword button or space. **Special drops appear in the arena — health to heal, shields to soak the next few hits** — so a sharp player can outlast the whole crowd and defend a long reign. It plays on desktop and mobile.
 
 ## Under the hood: real-time multiplayer with no game server
 
@@ -90,13 +90,14 @@ src/
   shared/            Types + constants shared by client and server
 ```
 
-## Roadmap
+## What's Next
 
 The competitive core is complete; the next layers deepen the hook:
 
+- **AI knight opponents to fill quiet rooms.** Bots that navigate the arena, contest the crown, and fight — so a room with only one or two real players still feels alive, then step aside as more humans join. This is the key to a strong experience at low player counts (including a judge who lands on the post alone). The host-authoritative networking to drive them is already in place; the remaining work is smarter, calmer AI so they play like real opponents rather than swarm.
 - Persistent rank and XP, with an all-time and daily "longest reign" leaderboard on the splash
 - Seasons and unlockable crowns as long-term goals to chase
-- Smarter AI challengers so a lone player always has a fight while a room fills
+- More special drops — speed boosts, temporary swords, and traps to shake up each round
 - Spectate and one-tap rematch
 
 ## Getting started
