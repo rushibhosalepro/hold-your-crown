@@ -50,10 +50,15 @@ function pickupSpot(gameId: string, k: number): { x: number; y: number; type: 'h
   return { x, y, type: k % 2 === 0 ? 'health' : 'shield' };
 }
 
-// On-screen attack button (fixed to the screen).
-const ATTACK_BTN_X = ARENA_W - 96;
-const ATTACK_BTN_Y = ARENA_H - 96;
-const ATTACK_BTN_R = 56;
+// On-screen attack button (fixed to the screen) — inset from the corner.
+const ATTACK_BTN_X = ARENA_W - 108;
+const ATTACK_BTN_Y = ARENA_H - 108;
+const ATTACK_BTN_R = 44;
+
+// On-screen quit button (top-left).
+const EXIT_BTN_X = 54;
+const EXIT_BTN_Y = 44;
+const EXIT_BTN_R = 26;
 
 // Networking.
 const BROADCAST_MS = 60; // ~16 Hz state broadcast
@@ -91,6 +96,7 @@ export class Game extends Scene {
 
   private requestAttack = false;
   private attackReadyAt = 0;
+  private exitArmedUntil = 0; // quit needs two taps; this is the confirm window
 
   private username = 'You';
 
@@ -150,6 +156,7 @@ export class Game extends Scene {
     this.grabCooldownUntil = 0;
     this.knockbackUntil = 0;
     this.attackReadyAt = 0;
+    this.exitArmedUntil = 0;
     this.requestAttack = false;
     this.joyActive = false;
     this.joyPointerId = null;
@@ -181,6 +188,7 @@ export class Game extends Scene {
 
     this.buildJoystick();
     this.buildAttackButton();
+    this.buildExitButton();
     this.setupInput();
     this.input.addPointer(2); // allow move + attack at the same time on touch
 
@@ -427,10 +435,44 @@ export class Game extends Scene {
       .setScrollFactor(0)
       .setDepth(25);
     this.add
-      .text(ATTACK_BTN_X, ATTACK_BTN_Y, '⚔', { fontFamily: 'Arial', fontSize: 40, color: '#ffffff' })
+      .text(ATTACK_BTN_X, ATTACK_BTN_Y, '⚔', { fontFamily: 'Arial', fontSize: 32, color: '#ffffff' })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(26);
+  }
+
+  private buildExitButton() {
+    this.add
+      .circle(EXIT_BTN_X, EXIT_BTN_Y, EXIT_BTN_R, 0x000000, 0.4)
+      .setStrokeStyle(2, 0xffffff, 0.55)
+      .setScrollFactor(0)
+      .setDepth(25);
+    this.add
+      .text(EXIT_BTN_X, EXIT_BTN_Y, '✕', { fontFamily: 'Arial', fontSize: 24, color: '#ffffff' })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(26);
+  }
+
+  private showExitHint() {
+    const hint = this.add
+      .text(EXIT_BTN_X + EXIT_BTN_R + 12, EXIT_BTN_Y, 'Tap ✕ again to quit', {
+        fontFamily: 'Arial',
+        fontSize: 16,
+        color: '#ffd24a',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0)
+      .setDepth(30);
+    this.tweens.add({
+      targets: hint,
+      alpha: 0,
+      delay: 2200,
+      duration: 600,
+      onComplete: () => hint.destroy(),
+    });
   }
 
   private setupInput() {
@@ -444,6 +486,15 @@ export class Game extends Scene {
     }
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      // Quit button (top-left): tap once to arm, tap again within the window to confirm.
+      if (Phaser.Math.Distance.Between(p.x, p.y, EXIT_BTN_X, EXIT_BTN_Y) <= EXIT_BTN_R) {
+        if (this.time.now < this.exitArmedUntil) this.endRound();
+        else {
+          this.exitArmedUntil = this.time.now + 2500;
+          this.showExitHint();
+        }
+        return;
+      }
       // A press on the attack button swings; it never starts the joystick.
       if (Phaser.Math.Distance.Between(p.x, p.y, ATTACK_BTN_X, ATTACK_BTN_Y) <= ATTACK_BTN_R) {
         this.requestAttack = true;
@@ -584,6 +635,7 @@ export class Game extends Scene {
   }
 
   private endRound() {
+    if (this.roundOver) return;
     this.roundOver = true;
     const board: { name: string; holdMs: number; longestMs: number; kills: number }[] = [
       {
