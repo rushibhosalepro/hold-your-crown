@@ -276,10 +276,20 @@ export class Game extends Scene {
   }
 
   private onMessage(msg: GameMsg) {
-    if (!this.net || msg.t2 === this.net.me) return; // ignore our own echoes
+    if (!this.net) return;
+
+    // Kills process regardless of sender (both the killer and the victim need them).
+    if (msg.kind === 'kill') {
+      if (msg.killer === this.net.me) this.myKills += 1;
+      this.showKill(`u/${msg.killer}  ⚔  u/${msg.victim}`);
+      return;
+    }
+
+    // State + attack: ignore our own echoes.
+    if (msg.t2 === this.net.me) return;
 
     if (msg.kind === 'attack') {
-      // Render the attacker's swing on our screen, and self-apply the hit if we're in the arc.
+      // Render the attacker's swing and self-apply the hit if our player is in the arc.
       this.showSlash(msg.x, msg.y, msg.facing);
       if (this.player.alive) {
         const dx = this.player.sprite.x - msg.x;
@@ -298,12 +308,6 @@ export class Game extends Scene {
       return;
     }
 
-    if (msg.kind === 'kill') {
-      if (msg.killer === this.net.me) this.myKills += 1;
-      this.showKill(`u/${msg.killer}  ⚔  u/${msg.victim}`);
-      return;
-    }
-
     if (msg.kind === 'pickup') {
       this.claimedPickups.add(msg.id);
       return;
@@ -311,41 +315,46 @@ export class Game extends Scene {
 
     if (msg.kind !== 'state') return;
 
+    this.upsertRemote(msg.t2, 'knight-blue', msg.name, msg.x, msg.y, msg.facing, msg.hp, msg.alive, {
+      holdMs: msg.holdMs,
+      longestMs: msg.longestMs,
+      kills: msg.kills,
+      hasCrown: msg.hasCrown,
+      shield: msg.shield,
+    });
+  }
+
+  // Create-or-update a rendered remote player from a state broadcast.
+  private upsertRemote(
+    id: string,
+    texture: string,
+    name: string,
+    x: number,
+    y: number,
+    facing: number,
+    hp: number,
+    alive: boolean,
+    extra: { holdMs: number; longestMs: number; kills: number; hasCrown: boolean; shield?: number }
+  ) {
     const now = this.time.now;
-    let r = this.remotes.get(msg.t2);
+    let r = this.remotes.get(id);
     if (!r) {
-      const knight = new Knight({
-        scene: this,
-        x: msg.x,
-        y: msg.y,
-        texture: 'knight-blue',
-        name: msg.name,
-      });
+      const knight = new Knight({ scene: this, x, y, texture, name });
       knight.freeze();
-      r = {
-        knight,
-        tx: msg.x,
-        ty: msg.y,
-        tFacing: msg.facing,
-        lastSeen: now,
-        holdMs: 0,
-        longestMs: 0,
-        kills: 0,
-        hasCrown: false,
-      };
-      this.remotes.set(msg.t2, r);
+      r = { knight, tx: x, ty: y, tFacing: facing, lastSeen: now, holdMs: 0, longestMs: 0, kills: 0, hasCrown: false };
+      this.remotes.set(id, r);
     }
-    r.tx = msg.x;
-    r.ty = msg.y;
-    r.tFacing = msg.facing;
+    r.tx = x;
+    r.ty = y;
+    r.tFacing = facing;
     r.lastSeen = now;
-    r.holdMs = msg.holdMs;
-    r.longestMs = msg.longestMs;
-    r.kills = msg.kills;
-    r.knight.shield = msg.shield; // drives the remote's shield ring
-    r.hasCrown = msg.hasCrown;
-    r.knight.setName(msg.name);
-    r.knight.applyRemoteHp(msg.hp, msg.alive);
+    r.holdMs = extra.holdMs;
+    r.longestMs = extra.longestMs;
+    r.kills = extra.kills;
+    r.hasCrown = extra.hasCrown;
+    r.knight.shield = extra.shield ?? 0;
+    r.knight.setName(name);
+    r.knight.applyRemoteHp(hp, alive);
   }
 
   private buildArena() {
@@ -478,10 +487,9 @@ export class Game extends Scene {
   }
 
   private onLocalDeath() {
-    // Report who killed us — drives the kill feed everywhere + the killer's counter.
+    // Report who killed us — the kill message drives the feed (incl. our own echo) + the counter.
     if (this.net && this.lastAttacker) {
       this.net.sendKill({ channel: this.channel, killer: this.lastAttacker, victim: this.net.me });
-      this.showKill(`u/${this.lastAttacker}  ⚔  You`);
     }
     // If we were holding the crown, release it (server bumps the version); others see our
     // hasCrown=false in the next state broadcast and treat the crown as loose.
