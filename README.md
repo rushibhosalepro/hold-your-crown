@@ -17,6 +17,7 @@ It is a live, top-down 2D arena where up to 10 real Redditors (knights) fight ov
 - **Short rounds, high frequency.** A round is three minutes. It is built for "just one more."
 - **A villain every match.** Whoever wears the crown becomes the shared target — the lobby unites against the leader, then fractures the instant it drops. That drama is emergent and different every time.
 - **Skill you can feel improving.** Reading the fight, timing a swing, stealing the crown at the right moment — it rewards getting better, which is what keeps competitive games alive.
+- **A record to chase.** Every reign is banked to a persistent leaderboard, all-time and daily. The post itself shows the longest reign yet ("can you beat it?"), and your results screen shows your personal best and rank — so there is always a number to beat and, once you top it, to defend.
 
 This is retention through **people**, not through a content treadmill. The hook is the oldest one there is: someone else is holding the thing you want.
 
@@ -86,7 +87,7 @@ src/
     scenes/entities/ Knight (player/remote sprite + hp/shield/crown)
     net/             Net — realtime connect + POST helpers
   server/            Hono app on Devvit
-    routes/api.ts    join / lobby / state / attack / crown / pickup / kill
+    routes/api.ts    join / lobby / state / attack / crown / pickup / kill / score / leaderboard / profile
   shared/            Types + constants shared by client and server
 ```
 
@@ -95,7 +96,7 @@ src/
 The competitive core is complete; the next layers deepen the hook:
 
 - **AI knight opponents to fill quiet rooms.** Bots that navigate the arena, contest the crown, and fight — so a room with only one or two real players still feels alive, then step aside as more humans join. This is the key to a strong experience at low player counts (including a judge who lands on the post alone). The host-authoritative networking to drive them is already in place; the remaining work is smarter, calmer AI so they play like real opponents rather than swarm.
-- Persistent rank and XP, with an all-time and daily "longest reign" leaderboard on the splash
+- Player levels and XP progression layered on top of the existing profile stats
 - Seasons and unlockable crowns as long-term goals to chase
 - More special drops — speed boosts, temporary swords, and traps to shake up each round
 - Spectate and one-tap rematch
