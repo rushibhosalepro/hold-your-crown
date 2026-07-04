@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import * as Phaser from 'phaser';
 import { showShareSheet } from '@devvit/web/client';
 import type { JoinResponse, LobbyResponse } from '../../shared/api';
 import { LOBBY_MS, MAX_PLAYERS } from '../../shared/constants';
