@@ -29,7 +29,11 @@ export class GameOver extends Scene {
 
     const winner = this.board[0];
     const title =
-      winner && winner.holdMs > 0 ? `👑 ${this.label(winner.name)} wins!` : 'No one held the crown';
+      winner && winner.holdMs > 0
+        ? winner.name === this.me
+          ? '👑 You win!'
+          : `👑 ${winner.name} wins!`
+        : 'No one held the crown';
     this.add
       .text(cx, 80, title, {
         fontFamily: 'Arial Black',

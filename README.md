@@ -4,7 +4,7 @@
 
 **Play:** [r/HoldYourCrown](https://www.reddit.com/r/HoldYourCrown/) · **Demo post:** _(add link)_ · **Video:** _(add link)_
 
-<!-- Add a gameplay gif/screenshot here, e.g. ![Hold Your Crown](./docs/arena.gif) -->
+![Hold Your Crown](./images/hero.png)
 
 ---
 
@@ -35,6 +35,8 @@ Reddit is live, communal, and competitive. Across recent Devvit games there are 
 6. After three minutes, **the most total crown-time wins.**
 
 Move with WASD / arrow keys or the on-screen joystick and attack with the sword button or space. **Special drops appear in the arena — health to heal, shields to soak the next few hits** — so a sharp player can outlast the whole crowd and defend a long reign. It plays on desktop and mobile.
+
+![In the arena](./images/arena.png)
 
 ## Under the hood: real-time multiplayer with no game server
 
