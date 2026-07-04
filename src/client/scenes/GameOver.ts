@@ -1,4 +1,6 @@
 import { Scene } from 'phaser';
+import { showShareSheet } from '@devvit/web/client';
+import type { ProfileResponse } from '../../shared/api';
 
 type Standing = {
   name: string;
@@ -47,6 +49,26 @@ export class GameOver extends Scene {
       })
       .setOrigin(0.5);
 
+    // Personal best + all-time rank — the reason to come back and climb.
+    const roundBest = this.board.find((s) => s.name === this.me)?.longestMs ?? 0;
+    const bestText = this.add
+      .text(
+        cx,
+        176,
+        roundBest > 0 ? `🏆 Your reign this round: ${(roundBest / 1000).toFixed(1)}s` : '',
+        { fontFamily: 'Arial', fontSize: 18, color: '#ffe9a8' }
+      )
+      .setOrigin(0.5);
+    void fetch('/api/profile')
+      .then((r) => r.json())
+      .then((p: ProfileResponse) => {
+        const best = Math.max(p.longestReign, roundBest);
+        if (best <= 0) return;
+        const rank = p.rank > 0 ? ` · #${p.rank} all-time` : '';
+        bestText.setText(`🏆 Your best reign: ${(best / 1000).toFixed(1)}s${rank}`);
+      })
+      .catch(() => {});
+
     // Table columns.
     const nameX = 160;
     const totalX = 540;
@@ -73,13 +95,76 @@ export class GameOver extends Scene {
       this.add.text(killsX, y, `${s.kills}`, style).setOrigin(0.5, 0.5);
     });
 
-    const hint = this.add
-      .text(cx, 710, '▶  Tap to play again', { fontFamily: 'Arial', fontSize: 24, color: '#ffffff' })
-      .setOrigin(0.5);
-    this.tweens.add({ targets: hint, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
+    // Secondary actions (side by side): share a link back to the post + save a screenshot.
+    const chip = {
+      fontFamily: 'Arial',
+      fontSize: 20,
+      color: '#ffd24a',
+      backgroundColor: '#241a3d',
+      padding: { x: 18, y: 10 },
+    } as const;
 
-    // Re-queue into a fresh lobby (fresh=true so /join won't rejoin the game that just ended).
-    this.input.once('pointerdown', () => this.scene.start('Lobby', { fresh: true }));
+    const share = this.add
+      .text(cx - 150, 656, '📣  Share', chip)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    share.on('pointerup', () => this.shareScore());
+
+    const shot = this.add
+      .text(cx + 130, 656, '📸  Screenshot', chip)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    shot.on('pointerup', () => this.saveScreenshot());
+
+    // Play again (primary).
+    const again = this.add
+      .text(cx, 716, '▶  Play again', {
+        fontFamily: 'Arial Black',
+        fontSize: 26,
+        color: '#2a1a05',
+        backgroundColor: '#ffc531',
+        padding: { x: 32, y: 12 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    again.on('pointerup', () => this.scene.start('Lobby', { fresh: true }));
+    this.tweens.add({ targets: again, scale: { from: 1, to: 1.05 }, duration: 800, yoyo: true, repeat: -1 });
+  }
+
+  // Snapshot the results screen → share the image (mobile) or download it (fallback).
+  private saveScreenshot(): void {
+    this.game.renderer.snapshot((snap) => {
+      if (!(snap instanceof HTMLImageElement)) return;
+      const dataUrl = snap.src;
+      void (async () => {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], 'hold-your-crown.png', { type: 'image/png' });
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Hold Your Crown' });
+            return;
+          }
+        } catch {
+          // fall through to a plain download
+        }
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = 'hold-your-crown.png';
+        a.click();
+      })();
+    });
+  }
+
+  private shareScore(): void {
+    const mine = this.board.find((s) => s.name === this.me);
+    const top = this.board[0];
+    const won = !!top && top.name === this.me && top.holdMs > 0;
+    const text = mine
+      ? `I ${won ? 'won the crown 👑' : 'fought for the crown'} in Hold Your Crown — ` +
+        `${(mine.holdMs / 1000).toFixed(1)}s total reign, best streak ${(mine.longestMs / 1000).toFixed(1)}s, ` +
+        `${mine.kills} KOs. Think you can hold it longer?`
+      : 'Hold Your Crown — grab the crown and hold it longest to win! 👑';
+    void showShareSheet({ title: 'Hold Your Crown', text });
   }
 
   private label(name: string): string {

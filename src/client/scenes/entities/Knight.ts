@@ -94,8 +94,16 @@ export class Knight {
     this.shield = Math.min(SHIELD_MAX, this.shield + amount);
   }
 
+  /** Clear "got hit" feedback: flash red + pop, visible to everyone. */
   flash(): void {
-    this.scene.tweens.add({ targets: this.sprite, alpha: { from: 0.35, to: 1 }, duration: 180 });
+    this.sprite.setTint(0xff5b5b);
+    this.scene.time.delayedCall(150, () => this.sprite.clearTint());
+    this.scene.tweens.add({
+      targets: this.sprite,
+      scale: { from: 1.28, to: 1 },
+      duration: 190,
+      ease: 'Quad.easeOut',
+    });
   }
 
   setCrown(has: boolean): void {
@@ -106,7 +114,7 @@ export class Knight {
     this.alive = true;
     this.hp = this.maxHp;
     this.shield = 0;
-    this.sprite.setPosition(x, y).setVelocity(0, 0).setAlpha(1).setVisible(true);
+    this.sprite.setPosition(x, y).setVelocity(0, 0).setAlpha(1).setVisible(true).setScale(1).clearTint();
     this.nameLabel.setVisible(true);
     this.hpBarBg.setVisible(true);
     this.hpBarFill.setVisible(true);
@@ -115,7 +123,7 @@ export class Knight {
   private die(): void {
     this.alive = false;
     this.shield = 0;
-    this.sprite.setVelocity(0, 0).setVisible(false);
+    this.sprite.setVelocity(0, 0).setVisible(false).setScale(1).clearTint();
     this.nameLabel.setVisible(false);
     this.hpBarBg.setVisible(false);
     this.hpBarFill.setVisible(false);
@@ -146,7 +154,9 @@ export class Knight {
 
   /** Drive hp + visibility from a remote broadcast. */
   applyRemoteHp(hp: number, alive: boolean): void {
-    this.hp = Phaser.Math.Clamp(hp, 0, this.maxHp);
+    const next = Phaser.Math.Clamp(hp, 0, this.maxHp);
+    if (alive && next < this.hp) this.flash(); // took damage → visible hit pulse on every screen
+    this.hp = next;
     if (alive !== this.alive) {
       this.alive = alive;
       this.sprite.setVisible(alive).setAlpha(1);

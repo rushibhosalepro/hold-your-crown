@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { context, realtime, redis } from '@devvit/web/server';
-import type { JoinResponse, LobbyResponse } from '../../shared/api';
+import type { JoinResponse, LobbyResponse, ProfileResponse, ScorePayload } from '../../shared/api';
 import type {
   AttackPayload,
   CrownDropPayload,
@@ -8,6 +8,8 @@ import type {
   CrownGrabResponse,
   GameMsg,
   KillPayload,
+  LeaderboardEntry,
+  LeaderboardResponse,
   PickupClaimPayload,
   PickupClaimResponse,
   StatePayload,
@@ -83,13 +85,32 @@ api.post('/join', async (c) => {
       // full — the counter is already past MAX (harmless); try the next lobby
     }
 
-    // 2. No open lobby → open a new game atomically.
+    // 2. No open lobby → join/create the deterministic lobby for this time window.
+    // The id is derived from the 30s window, so simultaneous first-joiners converge on the
+    // SAME room (no lobby-split race). The atomic slot counter elects the creator (n === 1)
+    // and caps each room at MAX_PLAYERS, rolling to the next deterministic room on overflow.
     if (!gameId) {
-      const seq = await redis.incrBy(`${gamesKey}:seq`, 1);
-      gameId = `g${seq}`;
+      const base = `g${Math.floor(now / LOBBY_MS)}`;
+      for (let gen = 0; gen < 30 && !gameId; gen++) {
+        const lobbyId = gen === 0 ? base : `${base}r${gen}`;
+        const n = await redis.incrBy(`game:${postId}:${lobbyId}:slots`, 1);
+        if (n <= MAX_PLAYERS) {
+          gameId = lobbyId;
+          if (n === 1) {
+            createdAt = now;
+            await redis.zAdd(gamesKey, { member: lobbyId, score: now });
+          } else {
+            createdAt = (await redis.zScore(gamesKey, lobbyId)) ?? now;
+          }
+        }
+      }
+    }
+    if (!gameId) {
+      // Astronomically unlikely (300+ joins in one 30s window) — never 500.
+      gameId = `g${Math.floor(now / LOBBY_MS)}x${Math.floor(Math.random() * 1e6)}`;
       createdAt = now;
       await redis.zAdd(gamesKey, { member: gameId, score: now });
-      await redis.incrBy(`game:${postId}:${gameId}:slots`, 1); // slot #1 (me)
+      await redis.incrBy(`game:${postId}:${gameId}:slots`, 1);
     }
     await redis.expire(`game:${postId}:${gameId}:slots`, TTL_SEC);
 
@@ -274,6 +295,89 @@ api.post('/crown/drop', async (c) => {
   await redis.incrBy(verKey, 1); // open a fresh claim slot for the next grabber
   await redis.expire(verKey, TTL_SEC);
   return c.json({ ok: true });
+});
+
+// Persist a finished round into the caller's lifetime profile (no TTL) and the
+// reign leaderboards. Each player reports only their own result.
+api.post('/score', async (c) => {
+  const { username } = context;
+  if (!username) {
+    return c.json<ErrorResponse>({ status: 'error', message: 'not logged in' }, 400);
+  }
+  const body = await c.req.json<ScorePayload>();
+  const pKey = `p:${username}`;
+  const holdMs = Math.max(0, Math.round(body.holdTotalMs));
+  const longestMs = Math.max(0, Math.round(body.longestMs));
+  const xpGain = Math.max(0, body.kills) * 10 + (body.win ? 100 : 0) + Math.round(holdMs / 1000) + 20;
+
+  await redis.hIncrBy(pKey, 'gamesPlayed', 1);
+  await redis.hIncrBy(pKey, 'kills', Math.max(0, body.kills));
+  await redis.hIncrBy(pKey, 'wins', body.win ? 1 : 0);
+  await redis.hIncrBy(pKey, 'totalReignTime', holdMs);
+  await redis.hIncrBy(pKey, 'xp', xpGain);
+
+  // longestReign is a running max (one report per user per game → races negligible).
+  const prevBest = Number((await redis.hGet(pKey, 'longestReign')) ?? '0');
+  const best = Math.max(prevBest, longestMs);
+  if (best > prevBest) await redis.hSet(pKey, { longestReign: best.toString() });
+
+  // Leaderboards ranked by best single reign — the game's signature stat.
+  await redis.zAdd('lb:reign', { member: username, score: best });
+  const dayKey = `lb:day:${new Date().toISOString().slice(0, 10)}`;
+  const prevDay = await redis.zScore(dayKey, username);
+  if (prevDay === undefined || longestMs > prevDay) {
+    await redis.zAdd(dayKey, { member: username, score: longestMs });
+  }
+  await redis.expire(dayKey, 60 * 60 * 24 * 2); // keep daily boards ~2 days
+
+  return c.json({ ok: true });
+});
+
+// Top reigns, all-time and today.
+api.get('/leaderboard', async (c) => {
+  const top = async (key: string): Promise<LeaderboardEntry[]> => {
+    const rows = await redis.zRange(key, 0, 9, { by: 'rank', reverse: true });
+    return rows.map((r) => ({ name: r.member, score: r.score }));
+  };
+  const dayKey = `lb:day:${new Date().toISOString().slice(0, 10)}`;
+  return c.json<LeaderboardResponse>({
+    allTime: await top('lb:reign'),
+    daily: await top(dayKey),
+  });
+});
+
+// The caller's lifetime profile + their all-time reign rank.
+api.get('/profile', async (c) => {
+  const { username } = context;
+  if (!username) {
+    return c.json<ProfileResponse>({
+      username: '',
+      gamesPlayed: 0,
+      wins: 0,
+      kills: 0,
+      longestReign: 0,
+      totalReignTime: 0,
+      xp: 0,
+      rank: 0,
+    });
+  }
+  const h = await redis.hGetAll(`p:${username}`);
+  const longestReign = Number(h.longestReign ?? '0');
+  let rank = 0;
+  if (longestReign > 0) {
+    const asc = await redis.zRank('lb:reign', username);
+    if (asc !== undefined) rank = (await redis.zCard('lb:reign')) - asc; // 1-based, highest first
+  }
+  return c.json<ProfileResponse>({
+    username,
+    gamesPlayed: Number(h.gamesPlayed ?? '0'),
+    wins: Number(h.wins ?? '0'),
+    kills: Number(h.kills ?? '0'),
+    longestReign,
+    totalReignTime: Number(h.totalReignTime ?? '0'),
+    xp: Number(h.xp ?? '0'),
+    rank,
+  });
 });
 
 // Refresh a player's presence score and keep the roster key alive.

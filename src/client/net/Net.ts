@@ -1,4 +1,5 @@
 import { connectRealtime, disconnectRealtime, context } from '@devvit/web/client';
+import type { ScorePayload } from '../../shared/api';
 import type {
   AttackPayload,
   CrownDropPayload,
@@ -52,6 +53,14 @@ export class Net {
 
   sendKill(payload: KillPayload): void {
     void fetch('/api/kill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  sendScore(payload: ScorePayload): void {
+    void fetch('/api/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

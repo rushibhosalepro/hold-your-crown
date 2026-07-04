@@ -233,6 +233,32 @@ export class Game extends Scene {
       .setDepth(30)
       .setAlpha(0);
 
+    const startHint = this.add
+      .text(
+        ARENA_W / 2,
+        ARENA_H - 130,
+        'Grab the crown 👑 and hold it longest to win!\nInvite friends for a real battle.',
+        {
+          fontFamily: 'Arial',
+          fontSize: 19,
+          color: '#ffe9a8',
+          stroke: '#000000',
+          strokeThickness: 4,
+          align: 'center',
+          lineSpacing: 4,
+        }
+      )
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(29);
+    this.tweens.add({
+      targets: startHint,
+      alpha: 0,
+      delay: 4500,
+      duration: 1200,
+      onComplete: () => startHint.destroy(),
+    });
+
     console.info(
       `[arena] game=${this.gameId} channel=${this.channel} createdAt=${this.createdAt} offset=${this.clockOffset}`
     );
@@ -475,6 +501,16 @@ export class Game extends Scene {
       y: Math.round(py),
       facing: Math.round(facing * 100) / 100,
     });
+
+    // Instant feedback: flash any remote our swing likely caught (their HP broadcast stays authoritative).
+    const halfArc = Phaser.Math.DegToRad(SWORD_ARC_DEG) / 2;
+    for (const [, r] of this.remotes) {
+      if (!r.knight.alive) continue;
+      const dx = r.knight.sprite.x - px;
+      const dy = r.knight.sprite.y - py;
+      if (Math.hypot(dx, dy) > SWORD_RANGE) continue;
+      if (Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - facing)) <= halfArc) r.knight.flash();
+    }
   }
 
   private showSlash(x: number, y: number, facing: number) {
@@ -561,7 +597,19 @@ export class Game extends Scene {
       board.push({ name, holdMs: r.holdMs, longestMs: r.longestMs, kills: r.kills });
     }
     board.sort((a, b) => b.holdMs - a.holdMs);
-    this.scene.start('GameOver', { board, me: this.net?.me ?? 'You' });
+
+    // Persist our own result to the lifetime profile + reign leaderboards.
+    const me = this.net?.me ?? 'You';
+    const top = board[0];
+    const won = !!top && top.name === me && top.holdMs > 0;
+    this.net?.sendScore({
+      kills: this.myKills,
+      win: won,
+      holdTotalMs: Math.round(this.myHoldMs),
+      longestMs: Math.round(this.myLongestMs),
+    });
+
+    this.scene.start('GameOver', { board, me });
   }
 
   override update(time: number, delta: number) {

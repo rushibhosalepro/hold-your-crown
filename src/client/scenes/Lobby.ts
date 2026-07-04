@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { showShareSheet } from '@devvit/web/client';
 import type { JoinResponse, LobbyResponse } from '../../shared/api';
 import { LOBBY_MS, MAX_PLAYERS } from '../../shared/constants';
 
@@ -71,8 +72,34 @@ export class Lobby extends Scene {
       })
       .setOrigin(0.5, 0);
 
+    this.add
+      .text(
+        cx,
+        ARENA_H - 150,
+        'Waiting for challengers — the round starts soon.\nShare the post to fill the arena faster.',
+        { fontFamily: 'Arial', fontSize: 15, color: '#9a8fbe', align: 'center', lineSpacing: 4 }
+      )
+      .setOrigin(0.5);
+
+    const invite = this.add
+      .text(cx, ARENA_H - 98, '📣  Invite friends', {
+        fontFamily: 'Arial',
+        fontSize: 20,
+        color: '#ffd24a',
+        backgroundColor: '#241a3d',
+        padding: { x: 18, y: 10 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    invite.on('pointerup', () => {
+      void showShareSheet({
+        title: 'Hold Your Crown',
+        text: 'Join my crown battle — grab the crown and hold it longest to win! 👑',
+      });
+    });
+
     this.statusText = this.add
-      .text(cx, ARENA_H - 60, '', { fontFamily: 'Arial', fontSize: 14, color: '#8a7fae' })
+      .text(cx, ARENA_H - 50, '', { fontFamily: 'Arial', fontSize: 14, color: '#8a7fae' })
       .setOrigin(0.5);
 
     void this.join();

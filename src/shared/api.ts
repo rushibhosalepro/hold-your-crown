@@ -31,5 +31,16 @@ export type ScorePayload = {
   kills: number;
   win: boolean;
   holdTotalMs: number; // this player's cumulative crown-hold time this game
-  crownsStolen: number; // this player's steal count this game
+  longestMs: number; // this player's longest single reign this game (drives the leaderboard)
+};
+
+export type ProfileResponse = {
+  username: string;
+  gamesPlayed: number;
+  wins: number;
+  kills: number;
+  longestReign: number; // ms, best single reign ever
+  totalReignTime: number; // ms, cumulative reign across all games
+  xp: number;
+  rank: number; // 1-based all-time reign rank; 0 if unranked
 };

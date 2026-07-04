@@ -10,6 +10,7 @@
     <title>Hold Your Crown</title>
   </head>
   <body class="app">
+    <div class="mp-tag">2D Multiplayer<br />up to 10</div>
     <div class="glow" aria-hidden="true"></div>
     <div class="crown" aria-hidden="true">👑</div>
     <div class="content">
@@ -17,7 +18,27 @@
       <p class="tagline">One crown. Ten knights.<br />Hold it the longest — and rule the arena.</p>
     </div>
     <button class="start-button" id="start-button" type="button">Enter the Arena</button>
+    <div class="sub-buttons">
+      <button class="invite-button" id="howto-button" type="button">How to play</button>
+      <button class="invite-button" id="invite-button" type="button">Invite friends</button>
+    </div>
+    <p class="topreign" id="topreign"></p>
     <p class="hint" id="hint">Real-time brawl · up to 10 players</p>
+
+    <div class="modal" id="howto-modal">
+      <div class="modal-card">
+        <h2 class="modal-title">How to Play</h2>
+        <ul class="howto">
+          <li>Each round is <strong>3 minutes</strong> — the most total crown-time wins.</li>
+          <li>Grab the 👑 and hold it to be crowned <strong>king</strong>.</li>
+          <li>Get knocked out and the crown drops where you fell — anyone can steal it.</li>
+          <li>Move with WASD / arrows or the joystick; attack with the button or space.</li>
+          <li>Grab health &amp; shield drops to survive longer.</li>
+          <li>Live multiplayer, up to 10 — invite friends for a full lobby.</li>
+        </ul>
+        <button class="start-button modal-close" id="howto-close" type="button">Got it</button>
+      </div>
+    </div>
     <script type="module" src="splash.ts" defer></script>
   </body>
 </html>
