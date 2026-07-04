@@ -26,7 +26,7 @@ howtoModal?.addEventListener('click', (e) => {
 // Personalize the hint if we know who's viewing.
 const hint = document.getElementById('hint');
 if (hint && context.username) {
-  hint.textContent = `Ready, u/${context.username}  ·  up to 10 players`;
+  hint.textContent = `Ready to play, u/${context.username}`;
 }
 
 // Show the record to beat — a live hook right on the post preview.
@@ -36,7 +36,11 @@ void fetch('/api/leaderboard')
     const top = lb.allTime?.[0];
     const el = document.getElementById('topreign');
     if (el && top) {
-      el.textContent = `🏆 Longest reign: u/${top.name} — ${(top.score / 1000).toFixed(1)}s. Can you beat it?`;
+      const secs = (top.score / 1000).toFixed(1);
+      el.textContent =
+        top.name === context.username
+          ? `🏆 You hold the longest reign — ${secs}s. Defend your crown!`
+          : `🏆 Longest reign: u/${top.name} — ${secs}s. Can you beat it?`;
     }
   })
   .catch(() => {});

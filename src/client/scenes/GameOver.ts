@@ -95,26 +95,18 @@ export class GameOver extends Scene {
       this.add.text(killsX, y, `${s.kills}`, style).setOrigin(0.5, 0.5);
     });
 
-    // Secondary actions (side by side): share a link back to the post + save a screenshot.
-    const chip = {
-      fontFamily: 'Arial',
-      fontSize: 20,
-      color: '#ffd24a',
-      backgroundColor: '#241a3d',
-      padding: { x: 18, y: 10 },
-    } as const;
-
+    // Share your reign — an actual screenshot where the device supports it, else a link back.
     const share = this.add
-      .text(cx - 150, 656, '📣  Share', chip)
+      .text(cx, 656, '📣  Share your reign', {
+        fontFamily: 'Arial',
+        fontSize: 20,
+        color: '#ffd24a',
+        backgroundColor: '#241a3d',
+        padding: { x: 20, y: 10 },
+      })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     share.on('pointerup', () => this.shareScore());
-
-    const shot = this.add
-      .text(cx + 130, 656, '📸  Screenshot', chip)
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    shot.on('pointerup', () => this.saveScreenshot());
 
     // Play again (primary).
     const again = this.add
@@ -131,40 +123,39 @@ export class GameOver extends Scene {
     this.tweens.add({ targets: again, scale: { from: 1, to: 1.05 }, duration: 800, yoyo: true, repeat: -1 });
   }
 
-  // Snapshot the results screen → share the image (mobile) or download it (fallback).
-  private saveScreenshot(): void {
-    this.game.renderer.snapshot((snap) => {
-      if (!(snap instanceof HTMLImageElement)) return;
-      const dataUrl = snap.src;
-      void (async () => {
-        try {
-          const blob = await (await fetch(dataUrl)).blob();
-          const file = new File([blob], 'hold-your-crown.png', { type: 'image/png' });
-          if (navigator.canShare?.({ files: [file] })) {
-            await navigator.share({ files: [file], title: 'Hold Your Crown' });
-            return;
-          }
-        } catch {
-          // fall through to a plain download
-        }
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = 'hold-your-crown.png';
-        a.click();
-      })();
-    });
-  }
 
-  private shareScore(): void {
+  private boast(): string {
     const mine = this.board.find((s) => s.name === this.me);
     const top = this.board[0];
     const won = !!top && top.name === this.me && top.holdMs > 0;
-    const text = mine
+    return mine
       ? `I ${won ? 'won the crown 👑' : 'fought for the crown'} in Hold Your Crown — ` +
         `${(mine.holdMs / 1000).toFixed(1)}s total reign, best streak ${(mine.longestMs / 1000).toFixed(1)}s, ` +
         `${mine.kills} KOs. Think you can hold it longer?`
       : 'Hold Your Crown — grab the crown and hold it longest to win! 👑';
-    void showShareSheet({ title: 'Hold Your Crown', text });
+  }
+
+  // Share the result: an actual screenshot where the device supports file sharing,
+  // otherwise a link back to the post with the boast text.
+  private shareScore(): void {
+    const text = this.boast();
+    this.game.renderer.snapshot((snap) => {
+      void (async () => {
+        if (snap instanceof HTMLImageElement) {
+          try {
+            const blob = await (await fetch(snap.src)).blob();
+            const file = new File([blob], 'hold-your-crown.png', { type: 'image/png' });
+            if (navigator.canShare?.({ files: [file] })) {
+              await navigator.share({ files: [file], title: 'Hold Your Crown', text });
+              return;
+            }
+          } catch {
+            // fall through to the link share
+          }
+        }
+        void showShareSheet({ title: 'Hold Your Crown', text });
+      })();
+    });
   }
 
   private label(name: string): string {
