@@ -2,7 +2,12 @@
 
 > A real-time 2D multiplayer battle for a single crown, played live inside a Reddit post. Ten knights, one crown — grab it, defend it, and hold it longest to be crowned king. The whole lobby is coming for you.
 
-**▶ Play now:** [live demo post on r/HoldYourCrown](https://www.reddit.com/r/HoldYourCrown/comments/1un510p/hold_your_crown_grab_the_crown_hold_it_longest_to/) · **App listing:** [developers.reddit.com/apps/hold-your-crown](https://developers.reddit.com/apps/hold-your-crown) · **Video:** [watch the demo](https://youtu.be/MtdDtVSOryw)
+### 🔗 Try it
+
+- **Play now:** [live demo post on r/HoldYourCrown](https://www.reddit.com/r/HoldYourCrown/comments/1un510p/hold_your_crown_grab_the_crown_hold_it_longest_to/)
+- **Demo video:** [watch on YouTube](https://youtu.be/MtdDtVSOryw)
+- **App listing:** [developers.reddit.com/apps/hold-your-crown](https://developers.reddit.com/apps/hold-your-crown)
+- **Community:** [r/HoldYourCrown](https://www.reddit.com/r/HoldYourCrown/)
 
 ![Hold Your Crown](./images/hero.png)
 
