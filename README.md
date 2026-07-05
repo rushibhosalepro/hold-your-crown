@@ -49,7 +49,7 @@ The hard part of this project is not the swordplay — it is running a fast, con
 
 - **Client-broadcast state.** Each player simulates only themselves and broadcasts their state ~16 times a second; the server relays it over Devvit realtime. Everyone renders everyone else as a smoothly interpolated remote. No authoritative server loop needed.
 - **Single-owner facts are atomic in Redis.** There is exactly one crown. Claiming it is an atomic `hSetNX` per generation, so two players grabbing the same loose crown can never both win — the race resolves in a single Redis operation.
-- **Self-healing crown ownership.** Who holds the crown is *derived every frame* from the 16 Hz state stream, not from a fragile one-shot "taken/dropped" event. If a packet is ever lost, the next state broadcast reconciles every client within ~60 ms. This eliminated an entire class of desync bug.
+- **Self-healing crown ownership.** Who holds the crown is _derived every frame_ from the 16 Hz state stream, not from a fragile one-shot "taken/dropped" event. If a packet is ever lost, the next state broadcast reconciles every client within ~60 ms. This eliminated an entire class of desync bug.
 - **Time from a shared anchor.** Lobby countdowns and the three-minute round are computed from one stored `createdAt` plus each client's measured clock offset, so every player's clock ends together with nothing ticking it down server-side.
 - **Multi-room matchmaking.** Rooms cap at 10 via an atomic slot counter over a sorted-set room registry, with a rejoin pointer so a refresh never burns a seat. An 11th player simply opens a fresh room.
 
@@ -75,15 +75,15 @@ The whole client is Phaser: arcade-physics movement, a `FIT`-scaled 1024×768 ar
 
 ## Tech stack
 
-| Layer       | Technology                                      |
-| ----------- | ----------------------------------------------- |
-| Platform    | Devvit Web (Reddit Developer Platform)          |
-| Game engine | Phaser                                          |
-| Realtime    | Devvit realtime (client-broadcast relay)        |
-| State       | Redis (atomic claims, room registry, presence)  |
-| Server      | Hono                                            |
-| Build       | Vite                                            |
-| Language    | TypeScript (strict)                             |
+| Layer       | Technology                                     |
+| ----------- | ---------------------------------------------- |
+| Platform    | Devvit Web (Reddit Developer Platform)         |
+| Game engine | Phaser                                         |
+| Realtime    | Devvit realtime (client-broadcast relay)       |
+| State       | Redis (atomic claims, room registry, presence) |
+| Server      | Hono                                           |
+| Build       | Vite                                           |
+| Language    | TypeScript (strict)                            |
 
 ## Project layout
 
